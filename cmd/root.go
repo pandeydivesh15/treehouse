@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/fatih/color"
-	"github.com/kunchenguid/treehouse/internal/updater"
 	"github.com/spf13/cobra"
 )
 
@@ -27,29 +25,11 @@ so that multiple AI coding agents can work on the same repo in parallel.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return getRunE(cmd, args)
 	},
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		// Skip update check for dev builds, the update command itself,
-		// or when explicitly suppressed via env var.
-		if version == "dev" || os.Getenv("TREEHOUSE_NO_UPDATE_CHECK") == "1" {
-			return
-		}
-		if cmd.Name() == "update" {
-			return
-		}
-
-		// Show cached update notice from a previous check
-		if result := updater.ReadCache(version); result != nil && result.UpdateAvailable {
-			yellow := color.New(color.FgYellow)
-			yellow.Fprintf(os.Stderr, "A new version of treehouse is available: %s → %s\n", version, result.LatestVersion)
-			yellow.Fprintln(os.Stderr, "Run \"treehouse update\" to update")
-			fmt.Fprintln(os.Stderr)
-		}
-
-		// Spawn background check if cache is stale
-		if updater.IsCacheStale(version) {
-			_ = updater.SpawnBackgroundCheck(version)
-		}
-	},
+	// Upstream checks GitHub for a newer release here on every invocation
+	// and spawns a background process to do it. This binary is built from
+	// source, so a release version number says nothing about what is
+	// installed, and an unsolicited outbound call on every command is not
+	// wanted here.
 }
 
 func init() {
